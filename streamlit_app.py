@@ -18,7 +18,7 @@ from src.eval import compare_chunking_strategies, run_eval
 from src.generation import get_generation_provider
 from src.golden_qa_loader import load_golden_qa
 from src.graph import ask
-from src.ingest import load_indices
+from src.ingest import load_or_ingest_indices
 from src.models import AskRequest, ChunkingStrategy
 from src.reranker import get_reranker
 from src.storage import list_recent_queries, save_query
@@ -388,7 +388,7 @@ for key, value in DEFAULT_STATE.items():
 
 @st.cache_resource(show_spinner=False)
 def get_index(strategy: ChunkingStrategy):
-    return load_indices(strategy)
+    return load_or_ingest_indices(strategy, get_embedding_provider())
 
 
 @st.cache_resource(show_spinner=False)
