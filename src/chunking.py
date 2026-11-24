@@ -32,7 +32,7 @@ STRUCTURE_MAX_SECTION_SIZE = 1200
 # between adjacent prose paragraphs even on-topic). Re-tune this when
 # switching to a real embedding provider, whose similarity scores follow a
 # different distribution.
-SEMANTIC_SIMILARITY_THRESHOLD = 0.0
+SEMANTIC_SIMILARITY_THRESHOLD = 0.125
 SEMANTIC_MAX_CHUNK_SIZE = 1500
 
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
