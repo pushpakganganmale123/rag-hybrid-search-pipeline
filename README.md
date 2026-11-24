@@ -1,248 +1,493 @@
 # RAG Pipeline with Hybrid Search
 
-[![tests](https://github.com/kushimahar/rag-hybrid-search-pipeline/actions/workflows/tests.yml/badge.svg)](https://github.com/kushimahar/rag-hybrid-search-pipeline/actions/workflows/tests.yml)
-![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
+[![Tests](https://github.com/pushpakganganmale123/rag-hybrid-search-pipeline/actions/workflows/tests.yml/badge.svg)](https://github.com/pushpakganganmale123/rag-hybrid-search-pipeline/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Framework](https://img.shields.io/badge/Framework-FastAPI%20%7C%20Streamlit-009688)
 
-### Skills demonstrated
+**[Live Demo](https://rag-hybrid-search-pipeline-ixdpydawwopsufco8d4vno.streamlit.app/) · [GitHub Repository](https://github.com/pushpakganganmale123/rag-hybrid-search-pipeline)**
 
-Hybrid retrieval (dense + BM25 sparse, Reciprocal Rank Fusion) · configurable chunking
-strategies with an empirical comparison harness · grounded generation with verified inline
-citations · retrieval-confidence gating against hallucination · LangGraph orchestration ·
-real vector database (ChromaDB) · FastAPI · Streamlit · pytest
+A production-oriented Retrieval-Augmented Generation (RAG) system built over real FastAPI documentation. It combines dense vector retrieval using ChromaDB with sparse BM25 keyword search, Reciprocal Rank Fusion (RRF), reranking, grounded answer generation, citation verification, and retrieval-confidence gating.
 
-A production-grade RAG system over a **real** documentation corpus: dense vector search
-(ChromaDB) fused with BM25 sparse keyword search via Reciprocal Rank Fusion, a reranking
-pass, grounded generation with inline `[1][2]`-style citations, automated citation
-verification, and a composite confidence score -- with a retrieval-confidence gate that
-refuses to answer rather than hallucinate when nothing relevant was actually retrieved.
+The system is designed to do more than retrieve relevant documents: it evaluates whether retrieved evidence is sufficient to answer a question and can refuse to generate an answer when confidence is too low.
 
-## Why this exists
+## Key Features
 
-Most RAG portfolio projects are a single PDF and a LangChain quickstart. This one deliberately
-takes on the production concerns the build guide calls out as the actual differentiator:
-hybrid retrieval instead of dense-only, a documented chunking-strategy comparison instead of
-one arbitrary choice, citation verification instead of trusting the model cited correctly, and
-a real empirically-measured decision about when the system should say "I don't know" instead
-of confidently making something up.
+- **Hybrid Search:** Combines dense vector retrieval and BM25 sparse keyword retrieval.
+- **Reciprocal Rank Fusion:** Merges independent retrieval results using configurable weighted RRF.
+- **Multiple Chunking Strategies:** Supports fixed-size, structure-aware, and semantic chunking.
+- **Reranking:** Supports lexical reranking and an LLM-as-judge implementation.
+- **Grounded Generation:** Generates answers using retrieved source context with inline `[1][2]` citations.
+- **Citation Verification:** Checks whether cited sources support the corresponding claims.
+- **Confidence Gating:** Refuses low-confidence questions before invoking answer generation.
+- **LangGraph Orchestration:** Coordinates retrieval, fusion, reranking, generation, and verification.
+- **Evaluation Framework:** Uses a hand-authored golden Q&A dataset to compare retrieval and answer quality.
+- **Interactive Dashboard:** Explore documents, ask questions, compare retrieval modes, and inspect evaluation results.
+- **REST API:** Exposes the RAG pipeline through FastAPI endpoints.
 
-## The corpus is real, not synthetic
+## Technology Stack
 
-`docs_corpus/` is ~29 pages of FastAPI's actual official tutorial documentation, fetched live
-from `github.com/fastapi/fastapi` (pinned to tag `0.104.1`, MIT licensed) via
-`scripts/fetch_docs.py` -- not hand-written filler text. FastAPI's docs keep runnable code
-samples in separate files and include them into the markdown at build time
-(`{!path/to/file.py!}` directives); the fetch script resolves and inlines every one of those
-so the corpus is fully self-contained. See `docs_corpus/MANIFEST.md` for the full page list
-and exact source commit.
+| Component | Technology |
+|---|---|
+| Language | Python 3.11+ |
+| API | FastAPI |
+| Dashboard | Streamlit |
+| Vector Database | ChromaDB |
+| Sparse Retrieval | BM25 (`rank_bm25`) |
+| Retrieval Fusion | Reciprocal Rank Fusion |
+| Orchestration | LangGraph |
+| Data Validation | Pydantic |
+| History Storage | SQLite |
+| Testing | pytest |
+| Containerization | Docker, Docker Compose |
+| Embeddings | Offline hashing-based provider / OpenAI |
+| Generation | Extractive mock / OpenAI / Anthropic |
 
-`golden_qa/qa_v1.json` is a hand-authored 37-question golden set grounded in that same
-corpus -- 15 straightforward lookups, 8 multi-hop questions spanning two source files, 8
-questions the corpus genuinely doesn't answer, and 6 deliberately ambiguous questions. Every
-answer was checked against the actual fetched text, not generated.
+## Live Demo
 
-## Quickstart
+**[Launch the RAG Hybrid Search Dashboard](https://rag-hybrid-search-pipeline-ixdpydawwopsufco8d4vno.streamlit.app/)**
 
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+The dashboard provides:
 
-python scripts/ingest.py       # chunk + embed + index all 3 strategies (~10s, offline)
-python scripts/run_demo.py     # the whole story: citations, hybrid vs dense-only,
-                                # a refused no-answer case, chunking comparison
+- Ask questions against the indexed documentation.
+- Inspect retrieved document chunks and citations.
+- Compare hybrid search against dense-only retrieval.
+- Compare fixed-size, structure-aware, and semantic chunking.
+- Explore indexed documents and chunk distributions.
+- Review query history and evaluation results.
 
-pytest tests/ -v                # 83 tests, no network calls, no API key needed
+## Why This Project?
 
-uvicorn src.api:app --reload    # -> http://localhost:8000/docs
-streamlit run streamlit_app.py  # separate terminal
+Many basic RAG implementations demonstrate only document loading, embedding generation, and vector similarity search.
+
+This project focuses on additional engineering concerns involved in building a more reliable retrieval system:
+
+1. Dense-only retrieval can miss exact technical terms.
+2. Chunking decisions should be evaluated rather than selected arbitrarily.
+3. Generated citations should be checked against their source documents.
+4. Retrieval confidence should influence whether generation is attempted.
+5. Evaluation should include questions that the corpus cannot answer.
+
+The goal is to make retrieval quality, answer reliability, and system behavior observable and measurable.
+
+## The Documentation Corpus
+
+The project uses actual FastAPI tutorial documentation rather than synthetic example text.
+
+The `docs_corpus/` directory contains documentation fetched from the official [FastAPI repository](https://github.com/fastapi/fastapi), pinned to release tag `0.104.1`.
+
+The fetch script:
+
+- Retrieves the original documentation.
+- Resolves `{!path/to/file.py!}` include directives.
+- Inlines referenced Python code examples.
+- Produces a self-contained local documentation corpus.
+
+See `docs_corpus/MANIFEST.md` for source pages and provenance.
+
+### Golden Evaluation Dataset
+
+`golden_qa/qa_v1.json` contains 37 hand-authored questions grounded in the documentation corpus.
+
+| Question category | Cases |
+|---|---:|
+| Straightforward lookups | 15 |
+| Multi-hop questions | 8 |
+| Questions with no answer in the corpus | 8 |
+| Ambiguous questions | 6 |
+| **Total** | **37** |
+
+The dataset is intended to evaluate retrieval, answer correctness, faithfulness, and citation accuracy across different chunking strategies.
+
+## Architecture
+
+```text
+                    USER QUESTION
+                          |
+                          v
+                   LANGGRAPH PIPELINE
+                          |
+              +-----------+-----------+
+              |                       |
+              v                       v
+       DENSE RETRIEVAL          SPARSE RETRIEVAL
+        ChromaDB                 BM25 Search
+              |                       |
+              +-----------+-----------+
+                          |
+                          v
+                RECIPROCAL RANK FUSION
+                  Weighted RRF
+                          |
+                          v
+                       RERANK
+              Lexical / LLM-as-judge
+                          |
+                          v
+                 CONFIDENCE GATE
+                          |
+               +----------+----------+
+               |                     |
+          Low confidence        Sufficient evidence
+               |                     |
+               v                     v
+          REFUSE ANSWER       GROUNDED GENERATION
+                                     |
+                                     v
+                              CITATION CHECK
+                                     |
+                                     v
+                              CONFIDENCE SCORE
+                                     |
+                                     v
+                               FINAL RESPONSE
 ```
 
-## Architecture at a glance
+### Retrieval Pipeline
 
-```
-   retrieve_dense      retrieve_sparse        independent, same graph depth ->
-   (ChromaDB, cosine)   (BM25, exact terms)     safe LangGraph fan-out/fan-in
-        |-------------------|
-                 v
-    fuse (Reciprocal Rank Fusion, 0.7 dense / 0.3 sparse by default)
-                 v
-    rerank (mock lexical overlap, or a real LLM-as-judge pass)
-                 v
-    generate -- but ONLY if retrieval confidence clears a threshold;
-                below it, refuse immediately without calling generation at all
-                 v
-    verify_and_score (does every [N] citation actually say what's claimed?
-                       composite confidence: retrieval + citation coverage + completeness)
-```
+**1. Dense retrieval**
 
-## Hybrid retrieval actually matters here -- shown, not just claimed
+ChromaDB retrieves semantically similar document chunks using vector embeddings.
 
-`python scripts/run_demo.py` runs the same question ("What is an origin in the context of
-CORS?") through hybrid and dense-only retrieval and prints both result sets side by side.
-`origin` is short and generic enough that pure embedding similarity doesn't always pin it
-down precisely, while BM25's exact-term matching catches it directly -- the two result sets
-visibly diverge. (Note: ChromaDB's HNSW index is an *approximate* nearest-neighbor search,
-not an exact deterministic one, so the precise ranking can shift slightly between runs --
-itself a real characteristic of production vector databases worth knowing, not a bug.)
+**2. Sparse retrieval**
 
-## Chunking strategy comparison -- a real number, not a guess
+BM25 retrieves documents using keyword relevance and exact-term matching.
 
-`python scripts/run_chunking_comparison.py` runs the full 37-case golden set against all
-three strategies (fixed-size, structure-aware, semantic) and reports a winner per metric. A
-representative run in offline mode:
+**3. Reciprocal Rank Fusion**
+
+The two result sets are combined using weighted Reciprocal Rank Fusion.
+
+The default weighting is:
+
+- Dense retrieval: `0.7`
+- Sparse retrieval: `0.3`
+
+**4. Reranking**
+
+Retrieved chunks are reranked using lexical overlap or an LLM-as-judge implementation.
+
+**5. Confidence gating**
+
+The system checks retrieval confidence before attempting generation. If the evidence does not meet the configured threshold, it returns a refusal instead of generating an unsupported answer.
+
+**6. Grounded generation and verification**
+
+The generation stage produces an answer with inline source references. The verification stage checks citation support and contributes to the final confidence score.
+
+## Hybrid Retrieval: Dense vs. Sparse
+
+Hybrid retrieval is evaluated against dense-only retrieval using the same question:
+
+> What is an origin in the context of CORS?
+
+The term `origin` is relatively short and generic. Dense semantic retrieval may retrieve broadly related content, while BM25 can identify exact keyword matches.
+
+The demo script runs both retrieval approaches and displays their results side by side.
+
+This illustrates why combining semantic similarity with lexical relevance can improve retrieval for technical documentation.
+
+Note: ChromaDB uses approximate nearest-neighbor search, so exact ranking can vary slightly between runs.
+
+## Chunking Strategy Comparison
+
+The project implements three chunking strategies:
+
+- `fixed_size`
+- `structure_aware`
+- `semantic`
+
+The evaluation script runs the golden question set against each strategy and reports metrics such as pass rate, correctness, faithfulness, and citation accuracy.
+
+### Representative Offline Evaluation
 
 | Strategy | Pass rate | Correctness | Faithfulness | Citation accuracy |
-|---|---|---|---|---|
-| fixed_size | 0.68 | 0.53 | 0.70 | 0.89 |
-| structure_aware | 0.59 | 0.47 | 0.68 | 0.84 |
-| semantic | 0.59 | 0.48 | 0.65 | 0.78 |
+|---|---:|---:|---:|---:|
+| Fixed-size | 0.68 | 0.53 | 0.70 | 0.89 |
+| Structure-aware | 0.59 | 0.47 | 0.68 | 0.84 |
+| Semantic | 0.59 | 0.48 | 0.65 | 0.78 |
 
-**Fixed-size chunking wins most metrics here, which is not the "obviously correct" answer a
-lot of RAG tutorials imply.** With the offline mock embedding, fixed-size's larger, more
-uniform chunks give the extractive answer generator more surrounding context per chunk to
-work with. This is real, measured signal from this specific configuration -- re-run the
-comparison after switching to a real embedding provider (`OPENAI_API_KEY`) before trusting it
-as a general claim about chunking strategies; the ranking may well change with genuinely
-semantic embeddings instead of the offline hashing-trick stand-in.
+These are representative offline evaluation results, not universal performance guarantees.
 
-## Don't hallucinate when there's nothing to retrieve
+Fixed-size chunking performed best across most metrics in this particular configuration. The offline hashing-based embedding provider is not equivalent to a production semantic embedding model, so results should be reevaluated after switching providers.
 
-Per the build guide's explicit requirement, low-confidence retrieval short-circuits straight
-to a refusal *before* generation runs at all -- saving a real LLM call's cost too, not just
-avoiding a bad answer. This wasn't obvious from the start: **the first version of this system
-always attempted an answer and scored 0% correctness on every single "no answer expected"
-golden case**, extracting a confident-sounding but nonsensical response from whatever
-marginally-relevant chunk got retrieved. Sweeping the top retrieval score across all 37
-golden cases by difficulty (see `src/confidence.py`) found a real, if imperfect, separation:
-no-answer questions cluster around 0.17-0.30 dense similarity, answerable questions around
-0.23-0.56 -- enough overlap that no threshold is perfect, but `should_attempt_answer()`'s
-calibrated 0.25 cutoff took no-answer accuracy from 0% to 75% with only marginal cost to the
-other categories. That calibration note and its tradeoffs are documented directly in the code.
-
-## Switching to real providers
-
-Every stage (embeddings, reranking, generation, citation verification) has an offline mock
-and a real LLM-backed implementation behind the same interface. Set a key and nothing else
-changes:
+Run the comparison yourself:
 
 ```bash
-export OPENAI_API_KEY=sk-...
-python scripts/ingest.py       # re-ingest with real embeddings (dimension changes: 256 -> 1536)
+python scripts/run_chunking_comparison.py
+```
+
+## Hallucination Prevention: Confidence Gating
+
+A RAG system should not generate an answer simply because it retrieved some documents.
+
+This project implements a retrieval-confidence gate that can stop the pipeline before generation is invoked.
+
+The initial implementation attempted to answer every question, including questions the corpus could not answer. This resulted in unsupported answers for no-answer evaluation cases.
+
+The confidence threshold was calibrated using the golden dataset.
+
+The configured cutoff is `0.25` for `should_attempt_answer()`.
+
+In the reported offline evaluation:
+
+- No-answer accuracy improved from 0% to 75%.
+- Some overlap remained between answerable and unanswerable retrieval scores.
+- The threshold represents a trade-off rather than a perfect classifier.
+
+This approach avoids unnecessary generation calls when retrieval evidence is insufficient.
+
+See `src/confidence.py` for the implementation and calibration details.
+
+## Switching to Real AI Providers
+
+The project supports offline implementations and real provider-backed implementations behind common interfaces.
+
+The offline configuration allows the project to run without API keys. Real providers can be enabled using environment variables.
+
+Example:
+
+```bash
+export OPENAI_API_KEY=your-api-key
+```
+
+Then re-index the corpus:
+
+```bash
+python scripts/ingest.py
 python scripts/run_demo.py
 ```
 
-**Re-ingestion is required after switching embedding providers** -- the vector store holds
-embeddings from whichever provider indexed them, and mixing dimensions doesn't work. Chroma
-collections are namespaced by chunking strategy, so `python scripts/ingest.py` (or the
-`--strategy` flag for just one) rebuilds cleanly either way.
+**Important:** Re-ingestion is required when switching embedding providers.
 
-## API
+The offline embedding provider uses 256-dimensional vectors, while the configured OpenAI provider uses 1536-dimensional vectors. Existing vector collections must be rebuilt when the embedding dimension changes.
 
-```
-POST /v1/ask                  {"question": "...", "chunking_strategy": "structure_aware", "use_hybrid": true}
-GET  /v1/documents?strategy=structure_aware
-POST /v1/ingest?strategy=fixed_size
-GET  /v1/queries/{id}
-GET  /v1/queries
-GET  /v1/eval/run?strategy=structure_aware
-GET  /v1/eval/chunking-comparison
+The ChromaDB collections are namespaced by chunking strategy, allowing individual strategies to be rebuilt independently.
+
+## Quickstart
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/pushpakganganmale123/rag-hybrid-search-pipeline.git
+cd rag-hybrid-search-pipeline
 ```
 
-Full interactive docs at `/docs` once running.
+### 2. Create and activate a virtual environment
 
-## Running with Docker
+**Windows PowerShell:**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+**Linux / macOS:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Ingest the documentation corpus
+
+```bash
+python scripts/ingest.py
+```
+
+This builds the indexes for the configured chunking strategies.
+
+### 5. Run the demo
+
+```bash
+python scripts/run_demo.py
+```
+
+The demo covers hybrid versus dense-only retrieval, citations, a no-answer refusal, and chunking comparison.
+
+### 6. Run tests
+
+```bash
+pytest tests/ -v
+```
+
+The test suite covers core retrieval components, chunking, embeddings, confidence scoring, citation verification, API behavior, and integration workflows.
+
+### 7. Start the API
+
+```bash
+uvicorn src.api:app --reload
+```
+
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+### 8. Start the Streamlit dashboard
+
+Open another terminal:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The dashboard will be available at:
+
+```text
+http://localhost:8501
+```
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/v1/ask` | Ask a question |
+| GET | `/v1/documents` | List indexed documents |
+| POST | `/v1/ingest` | Rebuild an index |
+| GET | `/v1/queries/{id}` | Retrieve a query record |
+| GET | `/v1/queries` | List query history |
+| GET | `/v1/eval/run` | Run evaluation |
+| GET | `/v1/eval/chunking-comparison` | Compare chunking strategies |
+
+Example request:
+
+```json
+{
+  "question": "What is an origin in the context of CORS?",
+  "chunking_strategy": "structure_aware",
+  "use_hybrid": true
+}
+```
+
+Interactive API documentation is available at `/docs` when the API is running.
+
+## Docker Deployment
+
+Run the application using Docker Compose:
 
 ```bash
 docker compose up --build
 ```
 
-Three services: a one-shot `init` job that ingests the (already-committed) corpus into a
-shared volume, the API (`:8000`), and the Streamlit UI (`:8501`) -- both wait for `init` to
-complete before starting. Set `OPENAI_API_KEY`/`ANTHROPIC_API_KEY` in a `.env` file to run
-against real providers.
+The Compose configuration contains three services:
 
-## Design decisions worth knowing about
+| Service | Responsibility |
+|---|---|
+| `init` | Ingests the documentation corpus |
+| API | Runs the FastAPI service on port 8000 |
+| Streamlit | Runs the dashboard on port 8501 |
 
-**Why ChromaDB needed no mock/real split, but embeddings/generation/reranking did.** ChromaDB
-is itself a real, free, local, embedded vector database -- no server, no API key, exactly
-what the build guide asks for. The offline/online distinction only applies where a paid API
-is actually involved.
+The services share the initialized data volume, and the application services wait for initialization to complete.
 
-**Why the mock embedding is a hashing-trick bag-of-words vectorizer, not random noise.**
-Verified directly (see `tests/test_embeddings.py`): two chunks sharing vocabulary get
-genuinely higher cosine similarity than two that don't. That's what makes dense retrieval,
-semantic chunking, and the no-answer confidence gate all produce real, reproducible signal
-offline -- a stub returning fixed or random vectors couldn't support any of those three.
+Real provider credentials can be configured through a `.env` file.
 
-**Why citation verification splits on the `[N]` markers themselves, not on sentence
-punctuation.** An early version split the whole answer into sentences first and checked which
-sentence contained each marker. When a cited claim itself ends in terminal punctuation
-("...an `int`. [5]"), that naive split breaks *between* the period and the marker, leaving the
-marker alone in its own empty "sentence" -- a well-formed, correct citation got reported as
-"marker not found." Splitting on the markers directly and treating the span between two
-markers as the claim sidesteps the failure mode entirely; `tests/test_citation_verification.py`
-pins this down as a named regression test, not just a fixed bug.
+## Important Engineering Decisions
 
-**Why `eval_run_endpoint` and `eval_chunking_comparison_endpoint` are sync `def`, not
-`async def`, while `ask_endpoint` is async.** `run_eval()` calls the synchronous `ask()`
-wrapper, which drives the LangGraph pipeline via `asyncio.run()`. Declaring the FastAPI
-handler `async def` means it's already executing inside a running event loop, and
-`asyncio.run()` cannot be nested inside one -- a real `RuntimeError` caught by the API test
-suite, not a hypothetical. FastAPI runs sync `def` handlers in a worker thread automatically,
-which sidesteps the conflict entirely. `ask_endpoint` avoids the issue by awaiting
-`ask_async()` directly instead of going through the sync wrapper.
+### Why use ChromaDB instead of a mock vector database?
 
-**Why deduplication is scoped per-source-file instead of corpus-wide.** An O(n²) cosine
-comparison across the full corpus (up to ~1700 candidate chunks pre-dedup for the semantic
-strategy) is real, avoidable work. FastAPI's docs inline multiple near-identical code variants
-of the same example back to back *within a single file* (Python 3.9+ syntax, `Annotated`-style,
-etc.) -- exactly the redundancy this step exists to catch -- so scoping comparisons to each
-file keeps dedup fast without giving up the case it's actually for.
+ChromaDB is a real local vector database that supports persistent collections and similarity search without requiring a separate hosted service.
 
-## Project layout
+### Why use a hashing-based offline embedding provider?
 
+The offline provider creates deterministic bag-of-words vectors using feature hashing. It provides meaningful lexical similarity rather than returning random or constant vectors.
+
+This makes offline retrieval and evaluation reproducible without requiring a paid embedding API.
+
+### Why verify citations separately?
+
+A generated citation marker does not guarantee that the cited document supports the associated claim.
+
+The citation verification stage checks each `[N]` reference against its corresponding source content.
+
+### Why split citation markers before checking claims?
+
+Splitting answers on sentence punctuation can separate a citation marker from the claim it references.
+
+The implementation instead splits on citation markers and evaluates the claim spans between them. A regression test covers this edge case.
+
+### Why are some FastAPI endpoints synchronous?
+
+The evaluation functions use a synchronous wrapper around the LangGraph pipeline. That wrapper invokes `asyncio.run()`.
+
+Running it inside an already active event loop can cause a nested event-loop error. FastAPI executes synchronous route handlers in a worker thread, avoiding this conflict.
+
+The question-answering endpoint uses the asynchronous pipeline directly.
+
+### Why scope deduplication per source document?
+
+Comparing every chunk against every other chunk across the entire corpus introduces unnecessary quadratic work.
+
+Deduplication is scoped to each source file because the repeated code examples being targeted occur within individual documentation pages.
+
+## Project Structure
+
+```text
+rag-hybrid-search-pipeline/
+│
+├── src/
+│   ├── models.py
+│   ├── document_loader.py
+│   ├── chunking.py
+│   ├── embeddings.py
+│   ├── vector_store.py
+│   ├── bm25_index.py
+│   ├── fusion.py
+│   ├── reranker.py
+│   ├── generation.py
+│   ├── citation_verification.py
+│   ├── confidence.py
+│   ├── ingest.py
+│   ├── graph.py
+│   ├── eval.py
+│   ├── storage.py
+│   └── api.py
+│
+├── scripts/
+│   ├── fetch_docs.py
+│   ├── build_golden_qa.py
+│   ├── ingest.py
+│   ├── run_chunking_comparison.py
+│   └── run_demo.py
+│
+├── docs_corpus/
+│   └── MANIFEST.md
+│
+├── golden_qa/
+│   └── qa_v1.json
+│
+├── tests/
+├── streamlit_app.py
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+└── README.md
 ```
-src/
-  models.py                 Pydantic contracts: chunks, citations, confidence, eval results
-  document_loader.py           loads docs_corpus/ into SourceDocument objects
-  chunking.py                    fixed_size / structure_aware / semantic strategies
-  embeddings.py                    Mock (hashing-trick) / OpenAI providers
-  vector_store.py                    ChromaDB wrapper, one collection per chunking strategy
-  bm25_index.py                        sparse keyword search (rank_bm25)
-  fusion.py                              Reciprocal Rank Fusion
-  reranker.py                              Mock (lexical) / LLM-as-judge reranking
-  generation.py                              Mock (extractive) / OpenAI / Anthropic generation
-  citation_verification.py                     verifies each [N] citation against its source
-  confidence.py                                  retrieval-confidence gate + composite scoring
-  ingest.py                                        ties loader+chunker+embedder+stores together
-  graph.py                                           LangGraph orchestration for one ask() call
-  eval.py                                              golden-set eval + chunking comparison
-  storage.py                                             SQLite query/eval history
-  api.py                                                    FastAPI service
-scripts/
-  fetch_docs.py               live-fetches the real FastAPI docs corpus, resolves code includes
-  build_golden_qa.py            builds golden_qa/qa_v1.json from hand-authored source data
-  ingest.py                       CLI: (re)ingest one or all chunking strategies
-  run_chunking_comparison.py        golden-set eval across all 3 strategies
-  run_demo.py                         the full walkthrough
-docs_corpus/                real FastAPI tutorial pages (see MANIFEST.md for provenance)
-golden_qa/qa_v1.json        hand-authored, corpus-grounded golden Q&A set
-streamlit_app.py            Ask / Hybrid vs Dense-only / Chunking Comparison / Documents / History
-tests/                      83 tests -- unit + integration against the real committed corpus
-docker-compose.yml
-Dockerfile
+
+## Recording a Project Walkthrough
+
+For a command-line walkthrough:
+
+```bash
+python scripts/run_demo.py
 ```
 
-## Recording a walkthrough
+For a dashboard walkthrough, demonstrate:
 
-`python scripts/run_demo.py` runs the whole story end-to-end and is screen-recordable as-is.
-For a UI-driven recording: ask a question in the Ask tab and show the citations table with
-per-citation verification, switch to Hybrid vs Dense-only and run the CORS/"origin" question
-to show the two retrieval modes visibly diverging, then run the Chunking Strategy Comparison
-tab to show the winner-by-metric table generated live.
+1. Ask a technical question and inspect the generated answer and citations.
+2. Open Hybrid vs. Dense-only and compare retrieval results.
+3. Open Chunking Strategy Comparison and inspect the evaluation metrics.
+4. Explore the indexed documentation and chunk distribution.
+5. Demonstrate a question that the corpus cannot answer and show the refusal behavior.
 
 ## License
 
-MIT (see `LICENSE`) for the code in this repository. `docs_corpus/` contains real content
-fetched from [fastapi/fastapi](https://github.com/fastapi/fastapi) (also MIT licensed) --
-see `docs_corpus/MANIFEST.md` for the exact source pages and commit tag.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+The documentation corpus contains content fetched from the official [FastAPI repository](https://github.com/fastapi/fastapi), which is also MIT licensed. Refer to `docs_corpus/MANIFEST.md` for source provenance and page details.
